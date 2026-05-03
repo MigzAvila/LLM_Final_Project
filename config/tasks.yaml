@@ -1,51 +1,92 @@
-retrieve_data_task:
-  description: >
-    Use the tool to retrieve all background data for User ID "{user_id}" and Item ID "{item_id}".
-    You MUST use the Interaction Tool Wrapper to query data.
-    You MUST pass a valid JSON dictionary as Action Input, following these exact formats:
-
-    First, query the user profile:
-    Action: Interaction Tool Wrapper
-    Action Input: {{"query_type": "user", "target_id": "{user_id}"}}
-
-    Then, query the item details:
-    Action: Interaction Tool Wrapper
-    Action Input: {{"query_type": "item", "target_id": "{item_id}"}}
-
-    Then, query the user's historical reviews:
-    Action: Interaction Tool Wrapper
-    Action Input: {{"query_type": "review_by_user", "target_id": "{user_id}"}}
-
-    query_type must be exactly one of: "user", "item", "review_by_user", "review_by_item".
-    You MUST complete all three tool calls above, then compile all results into a summary.
-  expected_output: >
-    A markdown summary listing the user's historical preferences, average rating, rating distribution, and the target item's key attributes.
-  agent: data_retriever
-
 analyze_preference_task:
   description: >
-    Review the retrieved data for User "{user_id}" and Item "{item_id}", and perform a deep compatibility analysis.
-    Pay special attention to:
-    1. The user's AVERAGE star rating across all their reviews. If they average 3.2 stars, they are a critical reviewer.
-    2. The user's rating DISTRIBUTION - do they mostly give 1-2 stars, 3 stars, or 4-5 stars?
-    3. Whether this item's category/features align with things the user has rated highly or poorly before.
-    4. Do NOT assume the user will like the item. Many users are critical and give low ratings.
+    You are analyzing the compatibility between User "{user_id}" and Item "{item_id}" using ONLY the
+    factual data provided below. Do NOT invent attributes, products, brands, or categories that are
+    not in this data.
+
+
+    === USER PROFILE (verbatim from Yelp) ===
+
+    {user_summary}
+
+
+    === ITEM DETAILS (verbatim from Yelp) ===
+
+    {item_summary}
+
+
+    === USER REVIEW HISTORY (verbatim from Yelp) ===
+
+    {history_summary}
+
+
+    Produce a concise psychological/compatibility analysis that:
+
+    1. States the user's historical AVERAGE star rating and rating DISTRIBUTION exactly as listed.
+       If the user mostly gives 3-stars, treat them as a critical reviewer; if 4-5 stars, generous.
+
+    2. Compares the item's actual category/attributes against patterns visible in the user's prior
+       reviews (cite at least 2 specific past reviews when available).
+
+    3. Predicts whether this user is likely to give a HIGH, MEDIUM, or LOW rating, with a numeric
+       preliminary estimate that respects the user's historical distribution. Do NOT default to 4 or 5
+       just because the item has high public ratings.
+
+
+    HARD RULES:
+
+    - Never reference products or categories absent from the data above (no "headphones",
+      "keyboards", "Bluetooth devices", etc., unless they appear verbatim).
+
+    - If a field is missing or marked unavailable, say so plainly instead of inventing it.
   expected_output: >
-    A psychological analysis report that includes the user's average rating tendency, likely satisfaction level with this specific item, and a preliminary rating estimate with justification.
+    A short markdown analysis (max 250 words) that explicitly cites the user's average stars,
+    rating distribution, 1-2 quoted historical reviews, and a numeric preliminary rating estimate
+    with a one-sentence justification.
   agent: psychological_analyst
 
 simulate_review_task:
   description: >
-    Based on the preference analysis above, produce the final simulated rating and review.
-    CRITICAL RULES:
-    1. Your star rating MUST reflect the user's actual rating habits. If the user averages 3.0 stars, do NOT give 4.5.
-    2. Write the review in ENGLISH, matching the user's typical vocabulary and tone.
-    3. Be willing to give ratings of 1, 2, or 3 stars if the analysis suggests the user would be critical.
-    4. Your response must contain ONLY a valid JSON object in this exact format:
-    {{"stars": 3.0, "review": "The review text in English..."}}
-    Do NOT include any text before or after the JSON object. Do NOT use double curly braces.
+    Using ONLY the data and analysis already provided in this run, generate the simulated rating and
+    review that User "{user_id}" would write for Item "{item_id}".
+
+
+    === USER PROFILE ===
+
+    {user_summary}
+
+
+    === ITEM DETAILS ===
+
+    {item_summary}
+
+
+    === USER REVIEW HISTORY ===
+
+    {history_summary}
+
+
+    === FALLBACK RATING IF UNCERTAIN ===
+
+    {fallback_rating}
+
+
+    HARD RULES:
+
+    1. The "stars" value MUST be one of 1.0, 2.0, 3.0, 4.0, or 5.0 and must be consistent with the
+       user's historical rating distribution. If the user averages around 3.0, do NOT output 4.5.
+       If the user has both 3 and 5 star reviews, pick whichever fits this specific item best.
+
+    2. Write the review in ENGLISH (1-3 sentences) matching the user's prior tone, vocabulary, and
+       casing (many Yelp users write entirely in lowercase — replicate that if it is the user's style).
+
+    3. Reference only attributes, dishes, locations, or experiences that plausibly relate to the
+       item's actual categories from the data above. Do NOT mention products that are not in the
+       item's categories (e.g., do not invent electronics for a restaurant).
+
+    4. Output STRICTLY a single JSON object: {{"stars": <float>, "review": "<text>"}}. No prose,
+       no markdown fences, no commentary before or after.
   expected_output: >
-    Output ONLY a valid JSON object with exactly two keys: "stars" (a float from 1.0 to 5.0) and "review" (a string in English).
-    Example: {"stars": 3.0, "review": "The food was decent but nothing special..."}
-    Do NOT include any text before or after the JSON object.
+    A single JSON object with exactly two keys: "stars" (float 1.0-5.0) and "review" (string in
+    English matching the user's tone). No additional text.
   agent: behavior_simulator

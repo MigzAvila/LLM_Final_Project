@@ -28,10 +28,12 @@ print("🚀 啟動 NVIDIA NIM + CrewAI 真實 LLM 整合驗證")
 print("="*60)
 
 try:
-    # 1. 載入 Toy Dataset
-    print(">>> 載入 Toy Dataset (dummy_dataset)...")
-    simulator = Simulator(data_dir="dummy_dataset", device="cpu", cache=True)
-    simulator.set_task_and_groundtruth(task_dir="dummy_tasks", groundtruth_dir="dummy_groundtruth")
+    # 1. 載入 Yelp Dataset
+    print(">>> 載入 Yelp Dataset (yelp_dataset)...")
+    simulator = Simulator(data_dir="yelp_dataset", device="cpu", cache=True)
+    simulator.set_task_and_groundtruth(
+        task_dir="yelp_tasks", groundtruth_dir="yelp_groundtruth"
+    )
     simulator.set_agent(CrewAISimulationAgent)
 
     # 2. 真實呼叫 NVIDIA LLM 進行推論

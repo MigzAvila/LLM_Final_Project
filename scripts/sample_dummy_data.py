@@ -5,10 +5,10 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Sample dummy dataset and generate tasks and groundtruth")
-    parser.add_argument("--input", type=str, default="dummy_dataset/review.json", help="Path to input review.json")
+    parser.add_argument("--input", type=str, default="yelp_dataset/review.json", help="Path to input review.json")
     parser.add_argument("--ratio", type=float, default=0.01, help="Proportion of data to sample")
-    parser.add_argument("--task_dir", type=str, default="dummy_tasks", help="Output directory for tasks")
-    parser.add_argument("--gt_dir", type=str, default="dummy_groundtruth", help="Output directory for groundtruth")
+    parser.add_argument("--task_dir", type=str, default="yelp_sampled_tasks", help="Output directory for tasks")
+    parser.add_argument("--gt_dir", type=str, default="yelp_sampled_groundtruth", help="Output directory for groundtruth")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     
     args = parser.parse_args()

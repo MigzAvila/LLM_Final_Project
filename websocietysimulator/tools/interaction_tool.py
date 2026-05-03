@@ -3,6 +3,7 @@ import os
 import json
 import pandas as pd
 from typing import Optional, Dict, List, Any
+from .data_file_resolver import resolve_dataset_file
 
 logger = logging.getLogger("websocietysimulator")
 
@@ -38,7 +39,7 @@ class InteractionTool:
 
     def _load_data(self, filename: str) -> List[Dict]:
         """Load data as a list of dictionaries."""
-        file_path = os.path.join(self.data_dir, filename)
+        file_path = resolve_dataset_file(self.data_dir, filename)
         with open(file_path, 'r', encoding='utf-8') as file:
             return [json.loads(line) for line in file]
 

@@ -1,0 +1,16 @@
+hierarchical_predict_task:
+  description: >
+    Deliver a complete prediction package for User ID "{user_id}" and Item ID "{item_id}" using manager-led delegation.
+    You must coordinate specialist contributions and provide one final result.
+    Delegation policy:
+    - Delegate information gathering independently to specialists.
+    - Do not merge or inject speculative conclusions before collecting specialist outputs.
+    - Delegate final synthesis to the review simulation specialist.
+    CRITICAL tool format rule:
+    - Use CrewAI standard Action / Action Input style only.
+    - Do NOT use XML tags (for example: <minimax:tool_call>).
+    Final output format requirement:
+    {"stars": 3.5, "review": "A realistic review in English."}
+  expected_output: >
+    A single valid JSON object with keys "stars" (float between 1.0 and 5.0)
+    and "review" (string).

@@ -4,6 +4,7 @@ import json
 import lmdb
 from typing import Optional, Dict, List, Iterator
 from tqdm import tqdm
+from .data_file_resolver import resolve_dataset_file
 
 logger = logging.getLogger("websocietysimulator")
 
@@ -78,7 +79,7 @@ class CacheInteractionTool:
 
     def _iter_file(self, filename: str) -> Iterator[Dict]:
         """Iterate through file line by line."""
-        file_path = os.path.join(self.data_dir, filename)
+        file_path = resolve_dataset_file(self.data_dir, filename)
         with open(file_path, 'r', encoding='utf-8') as file:
             for line in file:
                 yield json.loads(line)

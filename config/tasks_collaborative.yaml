@@ -1,0 +1,16 @@
+collaborative_single_task:
+  description: >
+    Work collaboratively on ONE unified prediction task for User ID "{user_id}" and Item ID "{item_id}".
+    You are the lead synthesizer for the final answer.
+    Collaboration protocol:
+    1) The lead agent may delegate focused subtasks to suitable coworkers when useful.
+    2) Consolidate all findings into one final answer.
+    3) Return only valid JSON in this exact shape:
+       {"stars": 3.5, "review": "A realistic review in English."}
+    CRITICAL:
+    - Keep tool invocations in standard CrewAI format only.
+    - Do NOT use XML tags such as <minimax:tool_call>.
+  expected_output: >
+    A single valid JSON object with keys "stars" (float between 1.0 and 5.0)
+    and "review" (string).
+  agent: behavior_simulator

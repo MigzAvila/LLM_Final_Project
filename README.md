@@ -24,6 +24,88 @@ This repository includes:
 
 ---
 
+## How it works
+
+1. **`Simulator`** (`websocietysimulator`) loads your dataset (`yelp_dataset/`), task definitions (`yelp_tasks/`), and optional ground truth (`yelp_groundtruth/`). For each task it invokes your agent with the active user–item scenario.
+
+2. **`CrewAISimulationAgent`** (`crewai_simulation_agent.py`) is the bridge class: it uses the simulator’s `InteractionTool` to fetch user, item, and review history, turns them into compact text summaries, and passes them into a CrewAI **Flow**.
+
+3. **`AgentSocietyServingFlow`** (`src/flows/serving_flow.py`) reads `CREWAI_PROCESS_MODE` and runs one of three crews:
+   - **sequential** → `SimulationCrew`
+   - **collaborative** → `CollaborativeSingleTaskCrew`
+   - **hierarchical** → `HierarchicalManagerCrew`
+
+4. The crew produces a **predicted star rating** and **generated review** text. The flow parses JSON (or falls back to regex), clamps stars to 1–5, and returns them to the simulator.
+
+5. **`Simulator.evaluate()`** compares predictions to ground truth (when present) and reports metrics (for example RMSE-style error and sentiment-related scores), depending on the competition tooling.
+
+Optional **knowledge / RAG**: when `CREWAI_ENABLE_KNOWLEDGE=true`, `SimulationCrew` can attach a Chroma-backed knowledge source built from a JSON file (see [Optional: knowledge index](#optional-prebuild-and-reuse-crewai-knowledge-index)). The default path uses structured Yelp rows already injected into prompts, so RAG is off unless you enable it.
+
+---
+
+## Workflow
+
+Typical end-to-end flow:
+
+```mermaid
+flowchart LR
+  subgraph setup [Setup]
+    A["uv sync"] --> B["Copy .env.example → .env"]
+    B --> C["Place Yelp-format data under yelp_dataset/"]
+  end
+  subgraph run [Evaluate]
+    D["run_simulator_test.py"] --> E["Simulator + CrewAISimulationAgent"]
+    E --> F["AgentSocietyServingFlow"]
+    F --> G["Crew crew.kickoff"]
+    G --> H["stars + review"]
+    H --> I["evaluate vs ground truth"]
+  end
+  setup --> run
+```
+
+**Steps in plain language**
+
+| Step | What you do |
+|------|----------------|
+| 1. Install | `uv sync` (creates the virtual env and installs dependencies). |
+| 2. Configure | Copy `.env.example` to `.env` and set your OpenAI-compatible API key and base URL (see [Configuration](#configuration-env)). |
+| 3. Data | Ensure `yelp_dataset/` has `item.json`, `review.json`, `user.json`, and that `yelp_tasks/` / `yelp_groundtruth/` match what you want to evaluate. |
+| 4. Smoke test | `uv run python run_simulator_test.py --mock` (no API calls). |
+| 5. Real run | `uv run python run_simulator_test.py` (uses your LLM). Tune `SIMULATOR_NUM_TASKS`, threading, and `CREWAI_PROCESS_MODE` via `.env`. |
+| 6. Optional | Prebuild a CrewAI knowledge index with `scripts/index_knowledge.py` if you use `CREWAI_ENABLE_KNOWLEDGE=true`. |
+
+---
+
+## Configuration (.env)
+
+1. Copy the template and fill in secrets locally (the real `.env` file is gitignored):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   On Windows PowerShell you can use `Copy-Item .env.example .env`.
+
+2. **Required for non-mock runs**: `OPENAI_API_KEY`, and usually `OPENAI_API_BASE` / `OPENAI_BASE_URL` pointing at your provider (NVIDIA NIM, OpenAI, Minimax-compatible host, etc.). Model IDs often appear both here and in `config/agents.yaml`.
+
+3. **Common toggles** (all optional; defaults are in `.env.example`):
+
+   | Variable | Role |
+   |----------|------|
+   | `CREWAI_PROCESS_MODE` | `sequential` (default), `collaborative`, or `hierarchical` — selects which crew class runs in `AgentSocietyServingFlow`. |
+   | `CREWAI_ENABLE_KNOWLEDGE` | `true` to enable Chroma/RAG in `SimulationCrew`; default `false`. |
+   | `CREWAI_KNOWLEDGE_FILE` | JSON path for knowledge when RAG is enabled. |
+   | `CREWAI_USE_PREBUILT_INDEX` | When RAG is on, skip re-embedding if the index already exists. |
+   | `CREWAI_STORAGE_DIR` | Where CrewAI/Chroma stores local state (project-specific folder name). |
+   | `CREWAI_EMBEDDER_*` | Embedder for `scripts/index_knowledge.py`. |
+   | `SIMULATOR_NUM_TASKS` | Number of tasks to run, or `all` / `full` for every file in the task directory. |
+   | `SIMULATOR_THREADING` / `SIMULATOR_MAX_WORKERS` | Parallelism inside `Simulator.run_simulation`. |
+   | `GROQ_API_KEY`, `SERPER_API_KEY`, `COHERE_API_KEY` | Only if you add tools or agents that use these providers. |
+
+Do **not** commit `.env` or real API keys. Use `.env.example` as the shared template.
+
+---
+
 ## Directory Structure
 
 ### 1. **`websocietysimulator/`**  
@@ -68,21 +150,40 @@ This CrewAI Sandbox version exclusively utilizes [Astral `uv`](https://github.co
    ```bash
    uv run python run_simulator_test.py --mock
    ```
-   *If the environment is set up correctly, this will simulate the CrewAI agents using a mocked LLM (zero token cost) and print a successful JSON evaluation score.*
+   *If the environment is set up correctly, this will simulate the CrewAI agents using a mocked LLM (zero token cost) and print a successful JSON evaluation score.* By default it loads **`yelp_dataset`** and runs only the first **5** tasks from **`yelp_tasks`** / **`yelp_groundtruth`**; set environment variable `SIMULATOR_NUM_TASKS=all` to run every task in that folder.
 
-4. Connect to Real LLM and Embedding Models:
-   To unleash the genuine reasoning capabilities of the CrewAI agents, create a `.env` file in the root directory and configure your official or third-party OpenAI-compatible endpoints (e.g., NVIDIA NIM, Minimax).
-   ```bash
-   # .env example
-   OPENAI_API_KEY=your_actual_api_key_here
-   OPENAI_API_BASE=https://integrate.api.nvidia.com/v1  # Example for NVIDIA NIM
-   # OPENAI_API_BASE=https://api.minimax.chat/v1        # Example for Minimax
-   ```
-   Once the credentials are set, run the full realistic simulation without the mock flag:
+4. Connect to a real LLM:
+   Copy `.env.example` to `.env`, set `OPENAI_API_KEY` and your provider base URL (`OPENAI_API_BASE` / `OPENAI_BASE_URL`). See [Configuration (.env)](#configuration-env) for the full list of variables.
+
+   Then run the full simulation without the mock flag:
    ```bash
    uv run python run_simulator_test.py
    ```
    *This mode consumes real tokens as the multi-agent system actively queries the LLM and the Vector Embedding spaces to produce accurate predictions.*
+
+### 1.1 Optional: Prebuild and Reuse CrewAI Knowledge Index
+
+If you want to avoid recomputing embeddings every run, prebuild and persist a CrewAI knowledge index once, then reuse it (set `CREWAI_ENABLE_KNOWLEDGE=true` and the `CREWAI_*` variables in `.env` — see [.env.example](.env.example)):
+
+```bash
+uv run python scripts/index_knowledge.py --knowledge-file yelp_dataset/item.json --collection-name crew
+uv run python scripts/check_knowledge_index.py --collection-name crew
+```
+
+With `CREWAI_USE_PREBUILT_INDEX=true`, `src/crews/simulation_crew.py` can skip re-ingestion when the collection already exists.
+
+---
+
+### 1.2 Optional: Switch Crew Process Mode
+
+Set `CREWAI_PROCESS_MODE` in `.env` to `sequential` (default), `collaborative`, or `hierarchical`. This is read in `src/flows/serving_flow.py` and selects `SimulationCrew`, `CollaborativeSingleTaskCrew`, or `HierarchicalManagerCrew` respectively.
+
+Standalone pattern runners:
+
+```bash
+uv run python scripts/run_collaborative_single_task.py --mock
+uv run python scripts/run_hierarchical_manager.py --mock
+```
 
 ---
 
@@ -118,7 +219,7 @@ You can name the dataset directory whatever you prefer (e.g., `dataset/`).
 Create a custom agent by extending either `SimulationAgent` or `RecommendationAgent`. Refer to the examples in the `example/` directory. Here's a quick template:
 
 ```python
-from yelpsimulator.agents.simulation_agent import SimulationAgent
+from websocietysimulator.agent import SimulationAgent
 
 class MySimulationAgent(SimulationAgent):
     def workflow(self):
@@ -154,13 +255,13 @@ from websocietysimulator import Simulator
 from my_agent import MySimulationAgent
 
 # Initialize Simulator
-simulator = Simulator(data_dir="path/to/your/dataset", device="auto", cache=False)
+simulator = Simulator(data_dir="yelp_dataset", device="auto", cache=False)
 # The cache parameter controls whether to use cache for interaction tool.
 # If you want to use cache, you can set cache=True. When using cache, the simulator will only load data into memory when it is needed, which saves a lot of memory.
 # If you want to use normal interaction tool, you can set cache=False. Notice that, normal interaction tool will load all data into memory at the beginning, which needs a lot of memory (20GB+).
 
 # Load scenarios
-simulator.set_task_and_groundtruth(task_dir="path/to/task_directory", groundtruth_dir="path/to/groundtruth_directory")
+simulator.set_task_and_groundtruth(task_dir="yelp_tasks", groundtruth_dir="yelp_groundtruth")
 
 # Set your custom agent
 simulator.set_agent(MySimulationAgent)

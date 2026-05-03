@@ -27,9 +27,9 @@ print("🚀 啟動 CrewAI 真實訓練集大規模評測")
 # [第二步] 指向真實的龐大 Dataset 與任務路徑
 # ======================================================================
 # 💡 注意: 建議保留 cache=True，否則 16GB+ 的資料表會瞬間吃滿您的本機記憶體！
-DATA_DIR = "path/to/your/dataset"        
-TASK_DIR = "path/to/task_directory"      
-GROUNDTRUTH_DIR = "path/to/groundtruth_directory" 
+DATA_DIR = "yelp_dataset"
+TASK_DIR = "yelp_tasks"
+GROUNDTRUTH_DIR = "yelp_groundtruth"
 
 simulator = Simulator(data_dir=DATA_DIR, device="auto", cache=True)
 simulator.set_task_and_groundtruth(task_dir=TASK_DIR, groundtruth_dir=GROUNDTRUTH_DIR)

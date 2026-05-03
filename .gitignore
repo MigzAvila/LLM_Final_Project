@@ -40,5 +40,55 @@ knowledge/
 # AgentSociety Datasets & Caches
 # =========================
 dummy_dataset/lmdb_cache/
+yelp_dataset/lmdb_cache/
 *.mdb
 logs/
+
+# =========================
+# Local secrets & env (example is committed; real .env is not)
+# =========================
+!.env.example
+
+# =========================
+# Large / downloaded datasets (keep processed copies outside git or use LFS)
+# =========================
+data/Yelp-JSON/
+data/raw_yelp/
+data/**/*.zip
+data/**/*.tar
+yelp_tasks/
+yelp_tasks_2/
+yelp_groundtruth/
+yelp_groundtruth_2/
+yelp_dataset/
+tests/
+commands.md
+commands_yelp.md
+*.tar
+# Optional: local homework or docs you do not want in the repo
+data/*.pdf
+
+# =========================
+# Evaluation artifacts (often huge; remove these lines if you version them)
+# =========================
+yelp_groundtruth/
+
+# =========================
+# CrewAI / Chroma runtime storage (CREWAI_STORAGE_DIR default folder name)
+# =========================
+AgentSocietyChallenge_w_CrewAI/
+
+# =========================
+# Test & coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
