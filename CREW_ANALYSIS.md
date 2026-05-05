@@ -14,7 +14,7 @@
 3. [Crew Members (Agents)](#3-crew-members-agents)
 4. [How Agents Collaborate](#4-how-agents-collaborate)
 5. [Knowledge & Data Retrieval](#5-knowledge--data-retrieval)
-6. [Current Findings](#6-current-findings)
+6. [Current Findings](#6-current-findings) · [§6.5 Measured accuracy](#6-5-measured-accuracy-pipeline-report)
 7. [Running the Tests](#7-running-the-tests)
 
 ---
@@ -337,6 +337,30 @@ Real inference test summary format:
 ```
 Summary: MAE=X.XX  exact=Y/N  within 1 star=Z/N
 ```
+
+### 6.5 Measured accuracy (pipeline report)
+
+The following figures come from the official simulator evaluation block in [`pipeline_report_20260505_113003.json`](pipeline_report_20260505_113003.json) (`run_pipeline.py --mock --tasks 1`).
+
+| Run context | Value |
+|---|---|
+| **Report file** | `pipeline_report_20260505_113003.json` |
+| **Run timestamp** | `20260505_113003` |
+| **Mode** | Mock LLM (litellm patched; structural / smoke run) |
+| **Model name in report** | `minimaxai/minimax-m2.7` (from environment at report write time) |
+| **Tasks run / GT pairs** | `1` simulated vs `41` ground-truth rows loaded (evaluator uses `min(count)` → **n = 1** for metrics) |
+| **Pipeline errors** | `0` |
+
+**Simulator metrics (higher is better for all three):**
+
+| Metric | Score | Interpretation |
+|---|---|---|
+| **preference_estimation** | **0.9455** | Star-rating side of the objective (≈94.5% on this single pair). |
+| **review_generation** | **0.4513** | Text-similarity / review-quality score (≈45.1%). |
+| **overall_quality** | **0.6984** | Combined objective (≈69.8%). |
+
+> [!NOTE]
+> On this run the emitted review string was the adapter **fallback** (`"Crew execution failed; falling back to historical average."`), so **review_generation** and **overall_quality** mainly reflect that single-task path—not a full multi-task or failure-free crew run. Re-run `uv run python run_pipeline.py --tasks N` (or the full suite) and paste the latest `pipeline_report_*.json` metrics here when you want an updated accuracy table.
 
 ---
 
